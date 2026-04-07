@@ -287,44 +287,44 @@ const RoomController = ({ hotelId, roomId }: { hotelId: string, roomId: string }
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-white p-3 rounded-xl border border-gray-50 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Lightbulb size={18} className={state.light_on ? 'text-yellow-400' : 'text-gray-300'} />
+                <Lightbulb size={18} className={state.light_on === 'On' ? 'text-yellow-400' : 'text-gray-300'} />
                 <span className="text-xs font-medium">Свет</span>
               </div>
               <button 
-                onClick={() => sendCommand(state.light_on ? 1 : 0)}
-                className={`w-10 h-5 rounded-full relative transition-colors ${state.light_on ? 'bg-blue-600' : 'bg-gray-200'}`}
+                onClick={() => sendCommand(state.light_on === 'On' ? 1 : 0)}
+                className={`w-10 h-5 rounded-full relative transition-colors ${state.light_on === 'On' ? 'bg-blue-600' : 'bg-gray-200'}`}
               >
-                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${state.light_on ? 'left-6' : 'left-1'}`} />
+                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${state.light_on === 'On' ? 'left-6' : 'left-1'}`} />
               </button>
             </div>
             <div className="bg-white p-3 rounded-xl border border-gray-50 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {state.door_locked ? <DoorClosed size={18} className="text-gray-400" /> : <DoorOpen size={18} className="text-green-500" />}
+                {state.door_lock === 'Closed' ? <DoorClosed size={18} className="text-gray-400" /> : <DoorOpen size={18} className="text-green-500" />}
                 <span className="text-xs font-medium">Замок</span>
               </div>
               <button 
-                onClick={() => sendCommand(state.door_locked ? 2 : 3)}
+                onClick={() => sendCommand(state.door_lock === 'Closed' ? 2 : 3)}
                 className="text-[10px] font-bold text-blue-600 hover:underline"
               >
-                {state.door_locked ? 'ОТКРЫТЬ' : 'ЗАКРЫТЬ'}
+                {state.door_lock === 'Closed' ? 'ОТКРЫТЬ' : 'ЗАКРЫТЬ'}
               </button>
             </div>
             <div className="bg-white p-3 rounded-xl border border-gray-50 flex items-center justify-between">
               <span className="text-xs font-medium">Канал 1</span>
               <button 
-                onClick={() => sendCommand(state.channel1_on ? 5 : 4)}
-                className={`w-10 h-5 rounded-full relative transition-colors ${state.channel1_on ? 'bg-blue-600' : 'bg-gray-200'}`}
+                onClick={() => sendCommand(state.channel_1 === 'ChannelOn' ? 5 : 4)}
+                className={`w-10 h-5 rounded-full relative transition-colors ${state.channel_1 === 'ChannelOn' ? 'bg-blue-600' : 'bg-gray-200'}`}
               >
-                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${state.channel1_on ? 'left-6' : 'left-1'}`} />
+                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${state.channel_1 === 'ChannelOn' ? 'left-6' : 'left-1'}`} />
               </button>
             </div>
             <div className="bg-white p-3 rounded-xl border border-gray-50 flex items-center justify-between">
               <span className="text-xs font-medium">Канал 2</span>
               <button 
-                onClick={() => sendCommand(state.channel2_on ? 7 : 6)}
-                className={`w-10 h-5 rounded-full relative transition-colors ${state.channel2_on ? 'bg-blue-600' : 'bg-gray-200'}`}
+                onClick={() => sendCommand(state.channel_2 === 'ChannelOn' ? 7 : 6)}
+                className={`w-10 h-5 rounded-full relative transition-colors ${state.channel_2 === 'ChannelOn' ? 'bg-blue-600' : 'bg-gray-200'}`}
               >
-                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${state.channel2_on ? 'left-6' : 'left-1'}`} />
+                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${state.channel_2 === 'ChannelOn' ? 'left-6' : 'left-1'}`} />
               </button>
             </div>
           </div>

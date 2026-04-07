@@ -6,59 +6,7 @@ import protobuf from 'protobufjs';
 
 const CONTROLLER_IP = '192.168.1.100';
 const CONTROLLER_PORT = 7000;
-
-const protoDefinition = `
-syntax = "proto3";
-
-message ClientMessage {
-  oneof message {
-    bool get_info = 1;
-    bool get_state = 2;
-    States set_state = 3;
-  }
-}
-
-enum States {
-  LightOn = 0;
-  LightOff = 1;
-  DoorLockOpen = 2;
-  DoorLockClose = 3;
-  Channel1On = 4;
-  Channel1Off = 5;
-  Channel2On = 6;
-  Channel2Off = 7;
-}
-
-message ControllerResponse {
-  oneof response {
-    InfoResponse info = 1;
-    StateResponse state = 2;
-    StatusResponse status = 3;
-  }
-}
-
-message InfoResponse {
-  string ip = 1;
-  string mac = 2;
-  string ble_name = 3;
-  string token = 4;
-}
-
-message StateResponse {
-  bool light_on = 1;
-  bool door_locked = 2;
-  bool channel1_on = 3;
-  bool channel2_on = 4;
-  float temperature = 5;
-  float pressure = 6;
-  float humidity = 7;
-}
-
-message StatusResponse {
-  bool success = 1;
-  string error_message = 2;
-}
-`;
+const TIMEOUT = 5; // seconds
 
 async function startServer() {
   const app = express();
@@ -67,7 +15,7 @@ async function startServer() {
   app.use(express.json());
 
   // Load Protobuf
-  const root = protobuf.parse(protoDefinition).root;
+  const root = protobuf.loadSync(path.join(process.cwd(), 'controller.proto'));
   const ClientMessage = root.lookupType('ClientMessage');
   const ControllerResponse = root.lookupType('ControllerResponse');
 
@@ -77,7 +25,7 @@ async function startServer() {
       const client = new net.Socket();
       
       // Set timeout for local network requests
-      client.setTimeout(2000);
+      client.setTimeout(TIMEOUT * 1000);
 
       client.connect(CONTROLLER_PORT, CONTROLLER_IP, () => {
         const errMsg = ClientMessage.verify(messageData);
@@ -136,10 +84,10 @@ async function startServer() {
     } catch (e: any) {
       if (process.env.NODE_ENV !== 'production') {
         return res.json({
-          light_on: Math.random() > 0.5,
-          door_locked: true,
-          channel1_on: false,
-          channel2_on: true,
+          light_on: Math.random() > 0.5 ? 'On' : 'Off',
+          door_lock: 'Closed',
+          channel_1: 'ChannelOff',
+          channel_2: 'ChannelOn',
           temperature: 22.5 + Math.random(),
           pressure: 1013 + Math.random() * 10,
           humidity: 45 + Math.random() * 5
@@ -152,8 +100,8 @@ async function startServer() {
   app.post('/api/controller/command', async (req, res) => {
     const { command } = req.body;
     try {
-      const response = await sendToController({ set_state: command });
-      res.json(response.status || { success: true });
+      const response = await sendToController({ set_state: { state: command } });
+      res.json({ success: response.status === 'Ok' });
     } catch (e: any) {
       if (process.env.NODE_ENV !== 'production') {
         return res.json({ success: true });

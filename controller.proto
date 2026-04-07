@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+enum States {
+  LightOn = 0;
+  LightOff = 1;
+  DoorLockOpen = 2;
+  DoorLockClose = 3;
+  Channel1On = 4;
+  Channel1Off = 5;
+  Channel2On = 6;
+  Channel2Off = 7;
+}
+
+enum BinaryState {
+  Off = 0;
+  On = 1;
+}
+
+enum LockState {
+  Closed = 0;
+  Open = 1;
+}
+
+enum ChannelState {
+  ChannelOff = 0;
+  ChannelOn = 1;
+}
+
+enum Status {
+  Error = 0;
+  Ok = 1;
+}
+
+message SetStateRequest {
+  States state = 1;
+}
+
+message ClientMessage {
+  oneof message {
+    bool get_info = 1;
+    bool get_state = 2;
+    SetStateRequest set_state = 3;
+  }
+}
+
+message InfoResponse {
+  string ip = 1;
+  string mac = 2;
+  string ble_name = 3;
+  string token = 4;
+}
+
+message StateResponse {
+  BinaryState light_on = 1;
+  LockState door_lock = 2;
+  ChannelState channel_1 = 3;
+  ChannelState channel_2 = 4;
+  float temperature = 5;
+  float pressure = 6;
+  float humidity = 7;
+}
+
+message ControllerResponse {
+  oneof response {
+    InfoResponse info = 1;
+    StateResponse state = 2;
+    Status status = 3;
+  }
+}
