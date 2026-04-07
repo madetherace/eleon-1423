@@ -1,0 +1,78 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and role",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["guest", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Hotel": {
+      "title": "Hotel",
+      "description": "Hotel information",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "location": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["name", "location"]
+    },
+    "Room": {
+      "title": "Room",
+      "description": "Room details and status",
+      "type": "object",
+      "properties": {
+        "hotelId": { "type": "string" },
+        "roomNumber": { "type": "string" },
+        "type": { "type": "string" },
+        "price": { "type": "number" },
+        "status": { "type": "string", "enum": ["available", "occupied", "maintenance"] },
+        "lightOn": { "type": "boolean" },
+        "doorLocked": { "type": "boolean" }
+      },
+      "required": ["hotelId", "roomNumber", "status"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Room booking details",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "hotelId": { "type": "string" },
+        "roomId": { "type": "string" },
+        "checkIn": { "type": "string", "format": "date-time" },
+        "checkOut": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["confirmed", "checked-in", "completed", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "hotelId", "roomId", "checkIn", "checkOut", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/hotels/{hotelId}": {
+      "schema": "Hotel",
+      "description": "Hotels"
+    },
+    "/hotels/{hotelId}/rooms/{roomId}": {
+      "schema": "Room",
+      "description": "Rooms in a hotel"
+    },
+    "/bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "Bookings"
+    }
+  }
+}

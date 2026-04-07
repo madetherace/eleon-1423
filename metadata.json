@@ -1,0 +1,5 @@
+{
+  "name": "SmartHotel Access",
+  "description": "Система управления доступом и умными номерами в отелях. Бронирование, BLE-ключи и управление освещением.",
+  "requestFramePermissions": ["bluetooth"]
+}

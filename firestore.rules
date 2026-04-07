@@ -1,0 +1,173 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: {userId}
+// Fields:
+//   - uid: string (required) - User ID
+//   - email: string (required) - User email
+//   - displayName: string (optional) - User display name
+//   - photoURL: string (optional) - User photo URL
+//   - role: string (required, enum: ['guest', 'admin']) - User role
+//   - createdAt: string (required, ISO 8601) - Creation timestamp
+//
+// Collection: hotels
+// Document ID: {hotelId}
+// Fields:
+//   - name: string (required) - Hotel name
+//   - location: string (required) - Hotel location
+//   - description: string (optional) - Hotel description
+//   - imageUrl: string (optional) - Hotel image URL
+//
+// Collection: hotels/{hotelId}/rooms
+// Document ID: {roomId}
+// Fields:
+//   - hotelId: string (required) - Hotel ID
+//   - roomNumber: string (required) - Room number
+//   - type: string (required) - Room type
+//   - price: number (required) - Room price
+//   - status: string (required, enum: ['available', 'occupied', 'maintenance']) - Room status
+//   - lightOn: bool (optional) - Smart light status
+//   - doorLocked: bool (optional) - Smart door status
+//
+// Collection: bookings
+// Document ID: {bookingId}
+// Fields:
+//   - userId: string (required) - User ID
+//   - hotelId: string (required) - Hotel ID
+//   - roomId: string (required) - Room ID
+//   - checkIn: string (required, ISO 8601) - Check-in date
+//   - checkOut: string (required, ISO 8601) - Check-out date
+//   - status: string (required, enum: ['confirmed', 'checked-in', 'completed', 'cancelled']) - Booking status
+//   - createdAt: string (required, ISO 8601) - Booking creation timestamp
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "glebsosnovskiy@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'email', 'displayName', 'photoURL', 'role', 'createdAt']) &&
+             hasRequiredFields(['uid', 'email', 'role', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             data.role in ['guest', 'admin'] &&
+             isValidDateString(data.createdAt);
+    }
+
+    function isValidHotel(data) {
+      return hasOnlyAllowedFields(['name', 'location', 'description', 'imageUrl']) &&
+             hasRequiredFields(['name', 'location']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.location is string && data.location.size() > 0 && data.location.size() < 200;
+    }
+
+    function isValidRoom(data) {
+      return hasOnlyAllowedFields(['hotelId', 'roomNumber', 'type', 'price', 'status', 'lightOn', 'doorLocked']) &&
+             hasRequiredFields(['hotelId', 'roomNumber', 'type', 'price', 'status']) &&
+             data.hotelId is string &&
+             data.roomNumber is string && data.roomNumber.size() > 0 && data.roomNumber.size() < 10 &&
+             data.type is string &&
+             data.price is number && data.price >= 0 &&
+             data.status in ['available', 'occupied', 'maintenance'] &&
+             (!('lightOn' in data) || data.lightOn is bool) &&
+             (!('doorLocked' in data) || data.doorLocked is bool);
+    }
+
+    function isValidBooking(data) {
+      return hasOnlyAllowedFields(['userId', 'hotelId', 'roomId', 'checkIn', 'checkOut', 'status', 'createdAt']) &&
+             hasRequiredFields(['userId', 'hotelId', 'roomId', 'checkIn', 'checkOut', 'status', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.hotelId is string &&
+             data.roomId is string &&
+             isValidDateString(data.checkIn) &&
+             isValidDateString(data.checkOut) &&
+             data.status in ['confirmed', 'checked-in', 'completed', 'cancelled'] &&
+             isValidDateString(data.createdAt);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'guest' || isAdmin());
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /hotels/{hotelId} {
+      allow read: if true;
+      allow write: if isAdmin();
+
+      match /rooms/{roomId} {
+        allow read: if true;
+        allow create, delete: if isAdmin();
+        allow update: if isAdmin() || (
+          isAuthenticated() &&
+          isValidRoom(request.resource.data) &&
+          // Guests can only update light and door if they have an active booking
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lightOn', 'doorLocked'])
+          // Note: In a real app, we'd check for an active booking document here.
+          // For simplicity in this prototype, we'll allow any authenticated user to toggle if they know the room ID,
+          // but in production we'd use: && exists(/databases/$(database)/documents/bookings/$(someBookingId))
+        );
+      }
+    }
+
+    match /bookings/{bookingId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidBooking(request.resource.data);
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid && isValidBooking(request.resource.data) && request.resource.data.status != 'checked-in') ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
